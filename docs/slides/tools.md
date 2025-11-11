@@ -1,5 +1,5 @@
 ---
-title: Herramientas para agentes — Guía práctica
+title: Agente Futuro - Introducción
 theme: black
 separator: '^---$'
 verticalSeparator: '^--$'
@@ -7,6 +7,7 @@ revealOptions:
   margin: 0.04
   minScale: 0.4
   maxScale: 1.6
+  transition: slide
   slideNumber: 'c/t'
 ---
 
@@ -16,157 +17,229 @@ revealOptions:
 }
 .reveal section h1,
 .reveal section h2,
-.reveal section h3 {
+.reveal section h3,
+.reveal section h4 {
   text-align: center;
+}
+.reveal section h5 {
+  text-align: right;
 }
 </style>
 
-# Herramientas para agentes
-
-Cómo extender Open WebUI + Ollama para que los agentes ejecuten acciones reales.
-
----
-
-## Accediendo a datos meteorológicos
-
-1. Preguntar que tiempo hará mañana en nuestra ciudad. Que ocurre? 
-2. Navegar a la web de herramientas de OpenWebUI: http://localhost:3000/workspace/tools
-3. Instalar keyless_weather: https://openwebui.com/t/spyci/keyless_weather
-4. Activar la herramienta para que el agente tenga acceso.
-5. Volver a preguntar. Que ha ocurrido ahora?
+# Agente Futuro
+## Knowledge Base + Tools
 
 ---
 
-## Open WebUI - Workspace
-- 🤖 [Modelos](https://docs.openwebui.com/features/workspace/models):  
-Crea y gestiona modelos personalizados para propósitos específicos.
-- 🧠 [Conocimiento](https://docs.openwebui.com/features/workspace/knowledge):  
-Gestiona las bases de conocimiento necesarias para tu caso de usa aplicando RAG.
-- 📚 [Prompts](https://docs.openwebui.com/features/workspace/prompts):  
-Crea y organiza prompts reutilizables.
+## Agenda
+
+1. Configurar y usar **Knowledge** (base de conocimiento) en OpenWebUI.
+2. Instalar y habilitar **Tools** desde la librería comunitaria.
+3. **Crear** Tools propias en Python (3 ejemplos):
+
+  - Número aleatorio,
+  - Clima simple por ciudad (argumentos sencillos),
+  - Argumentos anidados/avanzados.
 
 ---
 
-## Paso 2 — Define el contrato de la herramienta
+## Requisitos previos
 
-Describe qué hace y qué parámetros recibe.
-
-```json
-{
-  "name": "buscar_doc",
-  "description": "Busca fragmentos en la base documental",
-  "schema": {
-    "query": "string",
-    "max_results": "integer"
-  }
-}
-```
-
--- 
-
-Tips:
-- Usa nombres descriptivos.
-- Documenta formatos esperados (ej. fechas, IDs).
-- Mantén los contratos pequeños y reutilizables.
+* OpenWebUI funcionando con **Ollama** (o API OpenAI-compatible).
+* Usuario con permisos para **Workspace** y **Tools**.
+* Editor integrado de OpenWebUI o acceso para importar herramientas.
 
 ---
 
-## Paso 3 — Implementa el handler
+## 🧠 Knowledge (Base de conocimiento)
+
+- Como se usan?  
+Puedes invocarlos en chat con `#nombre`.
+
+- Pasos rápidos
+
+1. **Workspace → Knowledge → New Knowledge** (pon un nombre claro, p. ej. `taller_agentes`).
+2. **Upload** documentos (PDF, MD, TXT, etc.).
+3. Opcional: añade **tags** y descripciones.
+4. En un chat: escribe `#` para seleccionar entradas.
+
+--
+
+### Consejos prácticos
+
+* **Estructura** por colecciones (p. ej. `kb_proyecto`, `kb_legal`, `kb_marketing`).
+* **Nombres cortos** y únicos para invocar con `#`.
+* Prefiere **TXT/MD** cuando puedas (menos ruido que PDF escaneado).
+* Sube documentos **versionados** (añade fecha en el nombre: `guia_facturas_2025-11-01.md`).
+* Revisa de vez en cuando el tamaño/duplicados; divide PDFs grandes.
+
+---
+
+## Instalar y habilitar Tools
+
+Instalar desde la librería comunitaria
+
+1. **openwebui.com → Tools** y elige una herramienta.
+2. Clic en **Get** → introduce la **URL/IP** de tu OpenWebUI.
+3. **Import to WebUI**.
+4. Otra opcion es explorar [herramienta](https://openwebui.com/tools) y clicar para importar directamente.
+
+---
+
+## Habilitar bases de conocimiento / tools en un modelo
+
+1. **Workspace → Models**.
+2. Edita el modelo (✏️) → sección **Tools**.
+3. Marca las Tools que quieras **por defecto** → **Save**.
+
+---
+
+## Crear tu propia Tool
+
+En OpenWebUI, una [Tool](https://docs.openwebui.com/features/plugin/tools/) es un **archivo Python** con:
+
+* **Docstring** superior con metadatos.
+* Clase **`Tools`** con métodos (cada método = una tool).
+* **Type hints** obligatorios para generar el esquema JSON.
+
+--
+
+## Cómo añadir tu Tool
+
+**Opción A (Marketplace):**
+
+* Sube tu archivo a un repo público y publícalo en la comunidad (opcional). Luego **Get → Import to WebUI**.
+
+**Opción B (desde OpenWebUI):**
+
+1. Ve a **Workspace → Tools**.
+2. Clic **+ New Tool** (o **Import** si tienes un JSON/paquete).
+3. Pega el **código Python** de arriba y **Save**.
+4. Activa la Tool en tu **modelo** (ver sección anterior).
+
+> Nota: asegúrate de que cada función tenga **type hints** y una docstring clara; así el modelo generará el esquema correctamente y sabrá cómo llamarla.
+
+--
+
+### Generemos una herramienta
+
+#### Numeros aleatorios
+
+Usa `random.randint` para generar los numeros y no te olvides de comprobar el rango!
+
+--
 
 ```python
-# tools/buscar_doc.py
-from typing import List
+import random
 
-def run(query: str, max_results: int = 3) -> List[str]:
-    """Devuelve fragmentos relevantes desde la colección local."""
-    if not query:
-        raise ValueError("El parámetro 'query' es obligatorio")
-
-    # TODO: conectar con vector DB o índice local
-    hits = [
-        {"title": "Manual DevContainer", "snippet": "Para abrir el contenedor..."},
-        {"title": "Guía Ollama", "snippet": "Usa `ollama pull` para descargar..."},
-    ]
-    return hits[:max_results]
+class Tools:
+    def random_int(self, min_value: int = 0, max_value: int = 100) -> int:
+        """
+        Devuelve un número entero aleatorio entre min_value y max_value (ambos incluidos).
+        :param min_value: límite inferior
+        :param max_value: límite superior
+        """
+        if min_value > max_value:
+            raise ValueError("min_value no puede ser mayor que max_value")
+        return random.randint(min_value, max_value)
 ```
 
--- 
+--
 
-Buenas prácticas:
-- Valida entradas antes de ejecutar lógica costosa.
-- Lanza errores explícitos (ValueError, RuntimeError).
-- Usa logs (`logging.getLogger(__name__)`) para diagnósticos.
+#### Valves y User Valves
 
----
+Usando [Valves](https://docs.openwebui.com/features/plugin/valves/)
 
-## Paso 4 — Registra la herramienta
+- Valves expone los parametros de tu herramienta accesible desde openweb ui.
+- Valves son globales, mientras que UserValves son especificas para cada usuario.  
 
-Actualiza `tools.json` (archivo global) o el registro equivalente en tu stack.
+--
 
-```json
-[
-  {
-    "name": "buscar_doc",
-    "description": "Busca fragmentos en la base documental",
-    "schema": {
-      "query": "string",
-      "max_results": {
-        "type": "integer",
-        "default": 3
-      }
-    },
-    "handler": "tools.buscar_doc:run"
-  }
-]
+* Ejercicio: Crea 2 valvulas para controlar el rango [minimo, máximo].
+
+--
+
+```python
+class Tools:
+    class Valves(BaseModel):
+        # Configurables desde la UI si los declaras aquí
+        default_min: int = Field(0, description="Mínimo numero a generar en el rango aleatorio")
+        default_max: int = Field(100, description="Máximo numero a generar en el rango aleatorio")
+
+    def __init__(self):
+        self.valves = self.Valves()
+
+    def random_int(self, min_value: Optional[int] = None, max_value: Optional[int] = None) -> int:
+        # Estos logs los veras en el container de openweb ui
+        min_value = min_value or self.valves.default_min
+        max_value = max_value or self.valves.default_min
+        ...
 ```
 
-- Usa rutas `package.module:function`.
-- Define valores por defecto para parámetros opcionales.
-- Mantén comentarios fuera de JSON (Reveal no los soporta).
+--
+
+#### Usando logs
+
+--
+
+```python
+    def random_int(self, min_value: Optional[int] = None, max_value: Optional[int] = None) -> int:
+        """
+        Devuelve un número entero aleatorio. Si no se da un rango lo toma de los valores por defecto, en caso contrario lo genera entre min_value y max_value (ambos incluidos).
+        :param min_value: límite inferior
+        :param max_value: límite superior
+        """
+        # Estos logs los veras en el container de openweb ui
+        print(f"[random_int] usando rango {min_value}-{max_value} (valves {self.valves.default_min}-{self.valves.default_max})")
+        ...
+```
+--
+
+#### Usando logs como es debido
+
+Usa python logs con el modulo logging.
+
+Y busca las diferencias ...
+
+--
+
+```python
+import logging
+
+def _init_logger():
+    logger = logging.getLogger('random_tool')
+    logger.setLevel(logging.INFO) 
+
+_init_logger()
+_logger = logging.getLogger('random_tool')
+
+    def random_int(self, min_value: Optional[int] = None, max_value: Optional[int] = None) -> int:
+        # Estos logs los veras en el container ... busca las diferencias
+        _logger.info(f"[random_int] usando rango {min_value}-{max_value} (valves {self.valves.default_min}-{self.valves.default_max})")
+        print(f"[random_int] usando rango {min_value}-{max_value} (valves {self.valves.default_min}-{self.valves.default_max})")
+        ...
+```
+
+--
+
+## Buenas prácticas
+
+* **Idempotencia**: que repetir la llamada no rompa nada.
+* **Validación**: comprueba/normaliza argumentos; devuelve errores útiles.
+* **Tiempos de espera**: usa timeouts en peticiones HTTP.
+* **Determinismo** (si aplica): loguea semillas en aleatorios cuando quieras reproducibilidad.
+* **Seguridad**: no ejecutes comandos del sistema; valida URLs/inputs si haces fetch.
 
 ---
 
-## Paso 5 — Probar en Open WebUI
+## Troubleshooting rápido
 
-1. Reinicia Open WebUI si la herramienta no aparece.
-2. Crea un nuevo chat y selecciona el modelo (ej. `gemma3:1b`).
-3. Pide explícitamente usar la herramienta:  
-   > "Busca documentación sobre devcontainers usando la herramienta `buscar_doc`."
-4. Revisa la consola de Open WebUI para ver la ejecución y los `observations`.
-
--- 
-
-Si falla:
-- Inspecciona los logs del contenedor (`docker logs` o `make logs` si existe).
-- Comprueba el nombre del handler y dependencias importadas.
-- Asegura que la función devuelve JSON serializable.
+* *El modelo no llama a la Tool*: confirma que está **habilitada** en el modelo o en el chat (`+`).
+* *Parámetros mal inferidos*: añade ejemplos en el prompt o llama **explícitamente** la función.
+* *Errores HTTP en `weather_now`*: revisa red corporativa/SSL/timeout y que la ciudad exista.
 
 ---
 
-## Depuración y observabilidad
+## Extra
 
-- **Timeouts**: limita ejecuciones largas (`asyncio.wait_for` o `signal`).
-- **Retornos**: formatea datos amigables para el LLM (listas cortas, texto conciso).
-- **Reintentos**: implementa retries con backoff cuando llamas APIs externas.
-- **Testing**: agrega pruebas unitarias a cada tool para validarla en aislamiento.
-
----
-
-## Extender a MCP (opcional)
-
-- Implementa un servidor MCP (`fastmcp`, `node-mcp`, etc.).
-- Expone herramientas similares a las locales pero vía protocolo MCP.
-- Configura Open WebUI: `Settings → MCP Servers → añadir endpoint`.
-- Ventaja: reutilizas las mismas herramientas desde otros agentes o plataformas.
-
----
-
-# Checklist final
-
-- [ ] Contrato definido y documentado.
-- [ ] Handler validado con pruebas manuales/automáticas.
-- [ ] Registro actualizado (`tools.json` o MCP server).
-- [ ] Logs verificados en Open WebUI.
-- [ ] Demo lista con prompt de ejemplo.
-
-¡Listo! El agente ya puede ejecutar acciones usando tus herramientas.
+* Integra tu **KB** con Tools (p. ej., buscar en KB y luego llamar a otra Tool con el resultado).
