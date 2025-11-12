@@ -36,7 +36,6 @@ revealOptions:
 1. Qué es el **Model Context Protocol** y por qué usarlo.
 2. Cómo conectar **MCP servers** con OpenWebUI.
 3. Crear y probar **Tools MCP** (ejemplo con números aleatorios).
-4. Integrar APIs existentes vía **MPCO (Open API)**.
 
 ---
 
@@ -73,6 +72,50 @@ revealOptions:
 2. **Icono de usuario → Admin Panel → Settings → External Tools**.
 3. Añade la url (nombre del servicio docker compose y puerto).
 4. Guarda para que OpenWebUI compruebe el manifest y registre las tools MCP.
+
+--
+
+```yaml
+mcpo-weather:
+  image: ghcr.io/open-webui/mcpo:main
+  command:
+    - --port
+    - "8001"
+    - --api-key
+    - ${MCPO_API_KEY:-weather-secret}
+    - --config
+    - /config/mcpo-weather.json
+    - --hot-reload
+  environment:
+    MCPO_API_KEY: ${MCPO_API_KEY:-weather-secret}
+  volumes:
+    - ./mcpo-weather.json:/config/mcpo-weather.json:ro
+  networks:
+    - ai-solver
+  ports:
+    - "8009:8001"
+  restart: unless-stopped
+```
+
+--
+
+```json
+{
+  "mcpServers": {
+    "open_meteo_weather": {
+      "command": "npx",
+      "args": [
+        "--yes",
+        "open-meteo-mcp-server",
+        "--stdio"
+      ],
+      "env": {
+        "NODE_ENV": "production"
+      }
+    }
+  }
+}
+```
 
 ---
 
@@ -165,23 +208,21 @@ def random_int(min_value: Optional[int] = None, max_value: Optional[int] = None)
 
 ---
 
-## Sección MPCO (Open API)
+## OpenWeb UI MCPO (Open API proxy)
 
 - [**MPCO**](https://github.com/open-webui/mcpo) actúa como puente entre descripciones **OpenAPI** y el ecosistema MCP.
 - Permite registrar un manifiesto OpenAPI (YAML/JSON) y generar tools MCP automáticamente.
-- Flujo sugerido:
+
+--
+
+### Flujo sugerido:
   1. Define/recibe la especificación OpenAPI del servicio (p. ej. microservicio de pedidos).
-  2. MPCO lee la spec y expone cada `operationId` como tool MCP con validación de parámetros.
+  2. MCPO lee la spec y expone cada `operationId` como tool MCP con validación de parámetros.
   3. OpenWebUI descubre esas tools vía MCP y el modelo puede llamar endpoints REST sin código adicional.
-- Recomendaciones:
+
+--
+
+### Recomendaciones:
   * Mantén la spec sincronizada (usa `schemathesis` o CI para validar).
-  * Configura autenticación (API keys, OAuth) desde MPCO para no exponer credenciales al modelo.
+  * Configura autenticación (API keys, OAuth) desde mcpo para no exponer credenciales al modelo.
   * Documenta límites y tiempos de espera dentro de la spec para guiar al LLM.
-
----
-
-## Próximos pasos
-
-* Empaqueta tus servers MCP en la carpeta `servers/` del repo y crea scripts `make run-mcp-<tool>`.
-* Publica un catálogo interno (`awesome-mcp.md`) para que el resto del equipo conozca las herramientas disponibles.
-* Experimenta combinando MCP servers (p. ej. `random-mcp` + `reporting-mcp`) en un mismo modelo dentro de OpenWebUI.
