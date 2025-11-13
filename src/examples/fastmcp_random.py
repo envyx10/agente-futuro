@@ -53,4 +53,8 @@ def random_int(
 
 
 if __name__ == "__main__":
-    mcp.run()
+    # NOTE: Uncomment for stdio transport
+    # mcp.run()
+
+    # NOTE: Uncomment for HTTP transport
+    mcp.run(transport="http", host="0.0.0.0", port=8000, path="/mcp")
