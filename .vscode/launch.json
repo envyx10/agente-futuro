@@ -31,15 +31,14 @@
       "args": [
         "--port",
         "8000",
-        "--api-key",
-        "dev-secret",
         "--",
         "python3",
         "src/examples/fastmcp_random.py"
       ],
       "console": "integratedTerminal",
       "env": {
-        "PYTHONPATH": "/workspaces/ai-solver/src"
+        "PYTHONPATH": "/workspaces/ai-solver/src",
+        "MCPO_API_KEY": ""
       }
     }
   ]
